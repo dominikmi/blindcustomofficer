@@ -1,0 +1,19 @@
+# Blind-spot: third-party release binary — static musl curl built with brotli
+# (curl -V reports brotli/x.y). Single file, zero metadata of any kind.
+FROM debian:bookworm-slim AS build
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl xz-utils ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG CURL_VER=8.16.0
+RUN curl -fsSL -o /tmp/curl.tar.xz \
+      "https://github.com/stunnel/static-curl/releases/download/${CURL_VER}/curl-linux-aarch64-musl-${CURL_VER}.tar.xz" && \
+    tar -xJf /tmp/curl.tar.xz -C /tmp && \
+    /tmp/curl --version
+
+FROM debian:bookworm-slim
+
+COPY --from=build /tmp/curl /usr/local/bin/curl
+
+CMD ["/usr/local/bin/curl", "--version"]

@@ -1,0 +1,15 @@
+# Malpractice base: an org "base" image baked pre-fix and never rebuilt.
+# In the real world this is `myorg/base:latest` built months ago and still
+# tagged latest. Snapshot simulates its pre-fix bake date.
+FROM debian:bookworm-slim
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates; \
+    rm -f /etc/apt/sources.list.d/*; \
+    echo 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20260601T000000Z bookworm main' \
+      > /etc/apt/sources.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends libbrotli1; \
+    rm -rf /var/lib/apt/lists/*; \
+    dpkg -l libbrotli1

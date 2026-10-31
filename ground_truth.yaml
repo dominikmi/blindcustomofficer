@@ -1,0 +1,76 @@
+# Ground truth for the CVE-2026-111497 blind-spot corpus.
+# Every test plants the SAME vulnerability through a different delivery vector.
+cve: CVE-2026-111497
+title: "Brotli decoder out-of-bounds write"
+nicknames: [broccoli2shell, node2shell, HTTP2Shell]
+aliases:
+  - GHSA-9v8h-qqgm-4m35
+  - PYSEC-2026-4322
+  - PYSEC-2026-4323
+  - BIT-brotli-2026-111497
+  - BIT-node-2026-111497
+  - SNYK-JAVA-COMAAYUSHATHARVABROTLI4J-21762877
+
+# Advisory coverage as of scan date 2026-10-30 — needed to classify
+# "enumerated but unmatched" as an advisory gap vs a matcher gap.
+advisory_coverage:
+  deb: true          # debian/ubuntu trackers (grype db verified)
+  apk: true          # alpine/chainguard/wolfi (grype db verified)
+  rpm: true          # rhel/fedora/rocky/alma (grype db + snyk verified)
+  pypi: true         # GHSA-9v8h-qqgm-4m35 / PYSEC-4322/4323
+  maven: snyk-only   # SNYK-JAVA-...-21762877; no OSV package entry
+  golang: false      # no advisory anywhere (OSV + Snyk checked)
+  npm: false
+  nvd_cpe:
+    - cpe:2.3:a:google:brotli
+    - cpe:2.3:a:nodejs:node.js
+
+planted:
+  brotli_c: "1.1.0"          # source builds (t1,t2,t3,t12)
+  debian12_pkg: "1.0.9-2+b1" # ctrl-deb / t11 (snapshot 2026-10-01)
+  pypi: "1.1.0"              # ctrl-pip / t9
+  go_module: "v1.2.6"        # t5/t6 (andybalholm, pre-fix v1.2.7)
+  maven: "1.16.0"            # t7/t8 (brotli4j, fix = 1.24.0)
+  node: "20.x (EOL)"         # ctrl-node / t4 bundled brotli
+  curl: "8.16.0 static"      # t10 embedded brotli <=1.2.0
+  pillow_wheel: "1.2.0"      # t13 vendored libbrotli inside pillow.libs/
+
+tests:
+  # match = how to recognize the PLANTED component inside a syft SBOM
+  # (name = regex on artifact name, type = syft package type or 'any').
+  ctrl-deb:     {role: control,    vector: os-package-manager,  note: "dpkg record present",
+                 match: {name: '^libbrotli1$', type: deb}}
+  ctrl-pip:     {role: control,    vector: pypi-dist-info,      note: "full install metadata",
+                 match: {name: '^brotli$', type: python}}
+  ctrl-node:    {role: control,    vector: bundled-in-runtime,  note: "node binary = vuln carrier",
+                 match: {name: '^node$', type: any}}
+  t1-srcbuild:  {role: blind-spot, vector: source-build,        note: ".so + CLI in /usr/local, no records",
+                 match: {name: 'brotli', type: any}}
+  t2-vendored-so: {role: blind-spot, vector: vendored-solib,    note: "/opt/app/lib, rpath-linked app",
+                 match: {name: 'brotli', type: any}}
+  t3-static:    {role: blind-spot, vector: static-link,         note: "brotli = machine code in one ELF",
+                 match: {name: 'brotli|decoder', type: any}}
+  t4-node-scratch: {role: blind-spot, vector: bare-binary-scratch, note: "node binary only, FROM scratch",
+                 match: {name: '^node$', type: any}}
+  t5-go-mod:    {role: contested,  vector: go-build-info,       note: "enumerable via buildinfo; no advisory",
+                 match: {name: 'brotli', type: go-module}}
+  t6-go-stripped: {role: blind-spot, vector: go-source-vendored, note: "in-tree copy, no module record",
+                 match: {name: 'brotli', type: any}}
+  t7-jar:       {role: contested,  vector: maven-jar,           note: "jar metadata intact; snyk-only advisory",
+                 match: {name: 'brotli4j', type: any}}
+  t8-shaded:    {role: blind-spot, vector: shaded-jar,          note: "relocated + META-INF stripped",
+                 match: {name: 'brotli', type: java-archive}}
+  t9-py-vendored: {role: blind-spot, vector: pypi-no-distinfo,  note: "wheel contents, no dist-info",
+                 match: {name: 'brotli', type: python}}
+  t10-curl-bin: {role: blind-spot, vector: release-binary,      note: "static curl, brotli embedded",
+                 match: {name: 'brotli|^curl$', type: any}}
+  t11-dbstrip:  {role: blind-spot, vector: pkg-db-scrubbed,     note: "files at dpkg paths, status entry gone",
+                 match: {name: '^libbrotli1$', type: deb}}
+  t12-distroless: {role: blind-spot, vector: distroless,        note: "no shell, partial status.d DB",
+                 match: {name: 'brotli', type: any}}
+  t13-pip-transitive: {role: blind-spot, vector: vendored-in-wheel, note: "pillow==13.0.0 bundles libbrotli .so.1.2.0 in pillow.libs; dist-info says 'pillow'",
+                 match: {name: 'brotli', type: any}}
+  t14-stale-index: {role: malpractice, vector: cached-apt-index, note: "apt-get update in own cached layer -> stale index serves vuln pkg on every rebuild",
+                 match: {name: '^libbrotli1$', type: deb}}
+  t15-cached-base: {role: malpractice, vector: base-tag-drift,   note: "child rebuilt on stale pre-fix base image; nothing mentions brotli",
+                 match: {name: '^libbrotli1$', type: deb}}

@@ -1,0 +1,22 @@
+# Blind-spot: brotli 1.1.0 compiled from source into /usr/local — .so files and
+# the brotli CLI exist, but no package manager anywhere records them.
+FROM debian:bookworm-slim AS build
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential cmake curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG BROTLI_VER=1.1.0
+RUN curl -fsSL "https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VER}.tar.gz" | tar xz
+WORKDIR /brotli-${BROTLI_VER}
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build -j"$(nproc)" && \
+    cmake --install build --prefix /opt/brotli
+
+FROM debian:bookworm-slim
+
+COPY --from=build /opt/brotli/lib/ /usr/local/lib/
+COPY --from=build /opt/brotli/bin/ /usr/local/bin/
+RUN ldconfig && brotli --version || true
+
+CMD ["sh", "-c", "ls -l /usr/local/lib/libbrotli*"]

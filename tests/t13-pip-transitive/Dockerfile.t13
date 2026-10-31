@@ -1,0 +1,12 @@
+# Blind-spot: vulnerable brotli vendored INSIDE an unrelated package's wheel.
+# pillow==13.0.0 ships pillow.libs/libbrotli{dec,common}.so.1.2.0 (vulnerable),
+# but the only metadata on disk is Pillow's dist-info — nothing says "brotli".
+# Installed via uv pip install, i.e. a normal transitive-style dependency pull.
+FROM python:3.12-slim-bookworm
+
+RUN pip install --no-cache-dir uv && \
+    uv pip install --system --no-cache pillow==13.0.0 && \
+    python -c "import PIL; print('Pillow', PIL.__version__)" && \
+    find /usr/local/lib -path '*pillow.libs*brotli*' -o -path '*PIL/.dylibs*brotli*' | head
+
+CMD ["sh", "-c", "ls /usr/local/lib/python3.12/site-packages/pillow.libs/ | grep brotli || true"]

@@ -1,0 +1,27 @@
+# Blind-spot: static linking — the vulnerable decoder is machine code inside a
+# single ELF. No .so files, no version strings beyond whatever the linker kept.
+FROM debian:bookworm-slim AS build
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential cmake curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG BROTLI_VER=1.1.0
+RUN curl -fsSL "https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VER}.tar.gz" | tar xz
+WORKDIR /brotli-${BROTLI_VER}
+RUN cmake -S . -B build-static -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF && \
+    cmake --build build-static -j"$(nproc)" && \
+    find build-static -name '*.a'
+
+COPY src/decoder.c /tmp/decoder.c
+RUN mkdir -p /opt/app && \
+    dec_a=$(find build-static -name 'libbrotlidec*.a' | head -1) && \
+    com_a=$(find build-static -name 'libbrotlicommon*.a' | head -1) && \
+    gcc -O2 -o /opt/app/decoder /tmp/decoder.c -I/brotli-${BROTLI_VER}/c/include "$dec_a" "$com_a" && \
+    ldd /opt/app/decoder
+
+FROM debian:bookworm-slim
+
+COPY --from=build /opt/app/decoder /usr/local/bin/decoder
+
+CMD ["/usr/local/bin/decoder"]

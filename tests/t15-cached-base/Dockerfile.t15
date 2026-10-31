@@ -1,0 +1,10 @@
+# Blind-spot-adjacent: base-tag drift — "rebuilt today" on a stale base.
+# sca-blind/t15-base was baked pre-fix (vulnerable libbrotli); this Dockerfile
+# only adds app code and never mentions brotli. The image is fresh, the vuln
+# inside it is months old — the classic "we patched nothing" rebuild.
+FROM sca-blind/t15-base:latest
+
+COPY src/app.sh /usr/local/bin/app.sh
+RUN chmod +x /usr/local/bin/app.sh
+
+CMD ["/usr/local/bin/app.sh"]

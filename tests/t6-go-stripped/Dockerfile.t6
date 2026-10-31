@@ -1,0 +1,23 @@
+# Blind-spot: source-vendored Go — the same brotli code copied into the module
+# tree (no external dependency), built stripped. Build info lists only the app.
+FROM golang:1.25-bookworm AS build
+
+WORKDIR /app
+COPY src/go.mod src/main.go ./
+RUN set -eux; \
+    git clone --depth 1 --branch v1.2.6 https://github.com/andybalholm/brotli /tmp/brotli; \
+    mkdir -p internal/brotli; \
+    cp /tmp/brotli/*.go internal/brotli/; \
+    cp -r /tmp/brotli/matchfinder internal/brotli/; \
+    rm -f internal/brotli/*_test.go internal/brotli/go.mod; \
+    sed -i 's|github.com/andybalholm/brotli/matchfinder|scablind/t6/internal/brotli/matchfinder|g' \
+        internal/brotli/*.go; \
+    mkdir -p /out; \
+    go build -ldflags="-s -w -buildid=" -o /out/app .
+RUN go version -m /out/app || true
+
+FROM debian:bookworm-slim
+
+COPY --from=build /out/app /usr/local/bin/app
+
+CMD ["/usr/local/bin/app"]

@@ -1,0 +1,20 @@
+# Blind-spot: distroless runtime — vulnerable .so files dropped into an image
+# that has no shell and only a partial package DB (distroless keeps status.d).
+FROM debian:bookworm-slim AS build
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential cmake curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG BROTLI_VER=1.1.0
+RUN curl -fsSL "https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VER}.tar.gz" | tar xz
+WORKDIR /brotli-${BROTLI_VER}
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build -j"$(nproc)" && \
+    cmake --install build --prefix /opt/brotli
+
+FROM gcr.io/distroless/base-debian12
+
+COPY --from=build /opt/brotli/lib/libbrotlidec.so* /opt/brotli/lib/libbrotlicommon.so* /opt/app/lib/
+
+CMD ["/opt/app/lib"]

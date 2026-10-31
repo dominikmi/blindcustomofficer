@@ -1,0 +1,15 @@
+# Contested: brotli4j jar as a plain file — manifest/pom metadata intact inside
+# the jar, but no OS-level record. SNYK-JAVA advisory exists; OSV does not.
+FROM maven:3.9-eclipse-temurin-21 AS build
+
+RUN mvn -q dependency:get \
+        -Dartifact=com.aayushatharva.brotli4j:brotli4j:1.16.0 && \
+    mkdir -p /opt/app/lib && \
+    cp /root/.m2/repository/com/aayushatharva/brotli4j/brotli4j/1.16.0/brotli4j-1.16.0.jar \
+       /opt/app/lib/
+
+FROM eclipse-temurin:21-jre
+
+COPY --from=build /opt/app/lib /opt/app/lib
+
+CMD ["sh", "-c", "ls -l /opt/app/lib"]

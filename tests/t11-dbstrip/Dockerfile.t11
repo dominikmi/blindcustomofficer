@@ -1,0 +1,26 @@
+# Blind-spot: dpkg metadata scrubbed post-install — libbrotli files remain at
+# their standard paths, but /var/lib/dpkg/status no longer lists the package.
+FROM debian:bookworm-slim
+
+# Bootstrap TLS, then pin apt to the 2026-06-01 snapshot for vulnerable libbrotli1.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates; \
+    rm -rf /var/lib/apt/lists/*; \
+    rm -f /etc/apt/sources.list.d/*; \
+    echo 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20260601T000000Z bookworm main' \
+      > /etc/apt/sources.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends libbrotli1; \
+    rm -rf /var/lib/apt/lists/*; \
+    dpkg -l libbrotli1
+
+# Strip the libbrotli1 stanza from the dpkg status DB and its info files.
+RUN set -eux; \
+    awk 'BEGIN{RS="";ORS="\n\n"} !/^Package: libbrotli1\n/' /var/lib/dpkg/status > /tmp/status.new; \
+    mv /tmp/status.new /var/lib/dpkg/status; \
+    rm -f /var/lib/dpkg/status-old /var/lib/dpkg/info/libbrotli1.*; \
+    ! grep -q libbrotli1 /var/lib/dpkg/status; \
+    ls -l /usr/lib/*/libbrotli* /lib/*/libbrotli* 2>/dev/null || true
+
+CMD ["sh", "-c", "ls -l /usr/lib/*/libbrotli*"]

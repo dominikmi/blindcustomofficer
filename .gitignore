@@ -1,0 +1,3 @@
+tests/*/results/
+poc/trigger.br
+*.log

@@ -1,0 +1,20 @@
+# Blind-spot: the same wheel contents as ctrl-pip but with dist-info stripped —
+# _brotli.abi3.so + brotli.py exist in site-packages, no install record.
+FROM python:3.12-slim-bookworm AS wheels
+
+RUN pip download --no-cache-dir --no-deps Brotli==1.1.0 -d /wheels
+
+FROM python:3.12-slim-bookworm
+
+RUN --mount=type=bind,from=wheels,source=/wheels,target=/tmp/wheels \
+    set -eux; \
+    whl=$(ls /tmp/wheels/Brotli-1.1.0-*.whl); \
+    python -m zipfile -e "$whl" /tmp/brotli_whl/; \
+    find /tmp/brotli_whl -maxdepth 1 -type d -name '*.dist-info' -exec rm -rf {} +; \
+    SP=$(python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])"); \
+    cp -a /tmp/brotli_whl/. "$SP"/; \
+    rm -rf /tmp/brotli_whl; \
+    ls -la "$SP" | grep -i brotli; \
+    python -c "import brotli; print(brotli.__file__)"
+
+CMD ["python", "-c", "import brotli; print('ok')"]

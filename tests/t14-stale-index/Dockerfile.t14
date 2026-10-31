@@ -1,0 +1,24 @@
+# Build-malpractice variant: the cached-index-layer trap.
+# `apt-get update` in its own layer is cached FOREVER — a rebuild "today"
+# reuses the stale package index and still installs the vulnerable version,
+# even though a fix has long been published. Literalized via a pre-fix snapshot.
+FROM debian:bookworm-slim
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates; \
+    rm -rf /var/lib/apt/lists/*
+
+# Layer 1: apt index refresh — cached at first build and reused on every
+# rebuild unless --no-cache is passed. This is the malpractice.
+RUN set -eux; \
+    rm -f /etc/apt/sources.list.d/*; \
+    echo 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20260601T000000Z bookworm main' \
+      > /etc/apt/sources.list; \
+    apt-get update
+
+# Layer 2: much later, an install resolves whatever the STALE index knows.
+RUN apt-get install -y --no-install-recommends libbrotli1 && \
+    dpkg -l libbrotli1
+
+CMD ["dpkg", "-l", "libbrotli1"]

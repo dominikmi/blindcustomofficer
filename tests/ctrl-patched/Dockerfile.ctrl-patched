@@ -1,0 +1,7 @@
+# Negative control: SAME delivery vector as ctrl-pip but the FIXED version.
+# Patched decoders reject the trigger instantly with FORMAT_BLOCK_SWITCH.
+FROM python:3.12-slim-bookworm
+
+RUN pip install --no-cache-dir Brotli==1.2.1
+
+CMD ["pip", "show", "Brotli"]

@@ -1,0 +1,6 @@
+# Control: vulnerable brotli via pip with full dist-info — language-manifest path.
+FROM python:3.12-slim-bookworm
+
+RUN pip install --no-cache-dir Brotli==1.1.0
+
+CMD ["pip", "show", "Brotli"]

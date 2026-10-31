@@ -1,0 +1,9 @@
+# Blind-spot: the `node` binary itself (with statically bundled vulnerable
+# brotli) as a bare file in FROM scratch — no OS, no package DB, nothing else.
+FROM node:20-bookworm-slim AS node
+
+FROM scratch
+
+COPY --from=node /usr/local/bin/node /node
+
+CMD ["/node", "-e", "console.log(process.version)"]

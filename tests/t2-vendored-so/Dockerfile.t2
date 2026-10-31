@@ -1,0 +1,27 @@
+# Blind-spot: vendored .so directory — libs COPY'd to /opt/app/lib with an app
+# binary rpath-linked against them. No dpkg, no ldconfig, no metadata.
+FROM debian:bookworm-slim AS build
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential cmake curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG BROTLI_VER=1.1.0
+RUN curl -fsSL "https://github.com/google/brotli/archive/refs/tags/v${BROTLI_VER}.tar.gz" | tar xz
+WORKDIR /brotli-${BROTLI_VER}
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON && \
+    cmake --build build -j"$(nproc)" && \
+    cmake --install build --prefix /opt/brotli
+
+COPY src/decoder.c /tmp/decoder.c
+RUN mkdir -p /opt/app/lib && \
+    gcc -O2 -o /opt/app/decoder /tmp/decoder.c \
+        -I/opt/brotli/include -L/opt/brotli/lib \
+        -Wl,-rpath,'$ORIGIN/../lib' -lbrotlidec -lbrotlicommon && \
+    cp -a /opt/brotli/lib/libbrotli*.so* /opt/app/lib/
+
+FROM debian:bookworm-slim
+
+COPY --from=build /opt/app /opt/app
+
+CMD ["/opt/app/decoder"]

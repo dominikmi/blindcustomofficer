@@ -1,0 +1,5 @@
+# Control: stock node:20 image — node 20 is EOL and every 20.x bundles a
+# vulnerable brotli inside the `node` binary (NVD CPE nodejs:node.js).
+FROM node:20-bookworm-slim
+
+CMD ["node", "-e", "console.log(process.version)"]

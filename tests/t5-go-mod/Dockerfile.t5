@@ -1,0 +1,17 @@
+# Blind-spot contested: Go module dependency — the binary is opaque, but
+# go build-info embeds module name+version, which modern catalogers read.
+# NOTE: no Go-ecosystem advisory exists for this CVE yet (checked 2026-10-30),
+# so "enumerated but unmatched" is the expected interesting cell.
+FROM golang:1.25-bookworm AS build
+
+WORKDIR /app
+COPY src/go.mod src/main.go ./
+RUN go mod tidy && \
+    go build -o /out/app . && \
+    go version -m /out/app
+
+FROM debian:bookworm-slim
+
+COPY --from=build /out/app /usr/local/bin/app
+
+CMD ["/usr/local/bin/app"]
