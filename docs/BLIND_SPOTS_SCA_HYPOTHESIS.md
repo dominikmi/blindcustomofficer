@@ -63,12 +63,12 @@ Per image → `results/<scanner>/<image>.json`:
 4. `snyk container test <img> --json` — authenticated as `dominikmi` (verified via `snyk whoami`)
 5. `docker scout cves <img> --format json` — verified working (indexed `hello-world`; scout v1.27.0, v1.29.0 available)
 
-## Deliverables (`~/HomeWorks/investigation/docker_images_sca_blind/`)
+## Deliverables
 
-- `images/` + `ground_truth.yaml` (image → planted component/version/vector/expected-CVE)
-- `harness/`: `build_all.sh`, `scan_all.sh`, `matrix.py` (uv project, polars joins, pydantic models, type hints — your rules)
-- `results/` raw JSON + `_environment.json`
-- `report/REPORT.md` (+ PDF via pandoc): single-CVE detection matrix (vector × scanner), enumeration-vs-matching classification, DB-timestamp caveats, and the headline answer: **which delivery vectors of this CVE each scanner cannot see** — with special attention to Node's bundled brotli, since that's the actively-burning real-world case.
+- `tests/` + `ground_truth.yaml` (image → planted component/version/vector/expected-CVE)
+- `harness/`: `pipeline.sh` (build / sbom / scan per test or all), `matrix.py`
+- `tests/<name>/results/` raw scanner JSON + `_environment.json`
+- `report/REPORT.md` + `report/matrix.csv`: single-CVE detection matrix (vector × scanner), enumeration-vs-matching classification, DB-timestamp caveats, and the headline answer: **which delivery vectors of this CVE each scanner cannot see** — with special attention to Node's bundled brotli, since that's the actively-burning real-world case.
 
 ## Risks
 
